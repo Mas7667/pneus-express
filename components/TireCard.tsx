@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tire, TireType } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TireCardProps {
   tire: Tire;
-  onEdit: (tire: Tire) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (tire: Tire) => void;
+  onDelete?: (id: string) => void;
 }
 
 const getTypeColor = (type: TireType) => {
@@ -17,6 +19,19 @@ const getTypeColor = (type: TireType) => {
 };
 
 export const TireCard: React.FC<TireCardProps> = ({ tire, onEdit, onDelete }) => {
+  const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
+
+  const handleReserve = () => {
+    // Naviguer vers la page de réservation avec les infos du pneu
+    navigate('/booking', { 
+      state: { 
+        selectedTire: `${tire.brand} ${tire.model} - ${tire.width}/${tire.ratio} R${tire.diameter}`,
+        tireId: tire.id
+      } 
+    });
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
       <div className="h-40 bg-slate-100 relative overflow-hidden group">
@@ -53,18 +68,34 @@ export const TireCard: React.FC<TireCardProps> = ({ tire, onEdit, onDelete }) =>
           </span>
           
           <div className="flex space-x-2">
-            <button 
-              onClick={() => onEdit(tire)}
-              className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
-            >
-              Modifier
-            </button>
-            <button 
-              onClick={() => onDelete(tire.id)}
-              className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100 transition-colors"
-            >
-              Supprimer
-            </button>
+            {/* Afficher "Réserver" pour les clients connectés */}
+            {user && !isAdmin && (
+              <button 
+                onClick={handleReserve}
+                disabled={tire.stock === 0}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-orange-600 rounded hover:bg-orange-700 transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
+              >
+                Réserver
+              </button>
+            )}
+            
+            {/* Afficher "Modifier/Supprimer" pour les admins */}
+            {isAdmin && onEdit && onDelete && (
+              <>
+                <button 
+                  onClick={() => onEdit(tire)}
+                  className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
+                >
+                  Modifier
+                </button>
+                <button 
+                  onClick={() => onDelete(tire.id)}
+                  className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100 transition-colors"
+                >
+                  Supprimer
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

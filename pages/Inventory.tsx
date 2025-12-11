@@ -6,25 +6,23 @@ import { Modal } from '../components/Modal';
 import { TireForm } from '../components/TireForm';
 import { AlertModal } from '../components/AlertModal';
 import { useAlert } from '../hooks/useAlert';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Inventory: React.FC = () => {
   const [tires, setTires] = useState<Tire[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user, isAdmin } = useAuth();
   
-  // Filtering state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<TireType | ''>('');
 
-  // Alert modal
   const { alertState, showAlert, showConfirm, closeAlert } = useAlert();
 
-  // Modal/Form state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTire, setEditingTire] = useState<Tire | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Initial Load (Read)
   useEffect(() => {
     loadData();
   }, []);
@@ -42,39 +40,20 @@ export const Inventory: React.FC = () => {
     }
   };
 
-  // Filter Logic
   const filteredTires = useMemo(() => {
-    const results = tires.filter(tire => {
-      // Search in brand, model, dimension, and description
+    return tires.filter(tire => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = searchTerm === '' || 
         tire.brand.toLowerCase().includes(searchLower) ||
         tire.model.toLowerCase().includes(searchLower) ||
         tire.description.toLowerCase().includes(searchLower) ||
-        `${tire.width}/${tire.ratio}R${tire.diameter}`.includes(searchTerm) ||
-        `${tire.width}`.includes(searchTerm) ||
-        `${tire.ratio}`.includes(searchTerm) ||
-        `${tire.diameter}`.includes(searchTerm);
+        `${tire.width}/${tire.ratio}R${tire.diameter}`.includes(searchTerm);
       
-      // Filter by type - compare the actual values (string values from database)
       const matchesType = filterType === '' || tire.type === filterType;
-
       return matchesSearch && matchesType;
     });
-
-    // Debug logging (you can remove this later)
-    if (searchTerm || filterType) {
-      console.log('🔍 Filtres actifs:', { searchTerm, filterType });
-      console.log('📊 Résultats:', results.length, '/', tires.length);
-      if (filterType) {
-        console.log('🏷️ Types disponibles dans les données:', [...new Set(tires.map(t => t.type))]);
-      }
-    }
-
-    return results;
   }, [tires, searchTerm, filterType]);
 
-  // CRUD Operations
   const handleAdd = () => {
     setEditingTire(undefined);
     setIsModalOpen(true);
@@ -146,22 +125,26 @@ export const Inventory: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header & Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Inventaire</h1>
-          <p className="text-slate-500">Gérez votre stock de pneus</p>
+          <h1 className="text-2xl font-bold text-slate-800">
+            {user && !isAdmin ? 'Catalogue de Pneus' : 'Inventaire'}
+          </h1>
+          <p className="text-slate-500">
+            {user && !isAdmin ? 'Découvrez notre sélection de pneus' : 'Gérez votre stock de pneus'}
+          </p>
         </div>
-        <button 
-          onClick={handleAdd}
-          className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-sm transition-all flex items-center justify-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-          Ajouter un pneu
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={handleAdd}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-sm transition-all flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            Ajouter un pneu
+          </button>
+        )}
       </div>
 
-      {/* Filters */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
@@ -186,19 +169,16 @@ export const Inventory: React.FC = () => {
         {(searchTerm || filterType) && (
           <div className="mt-3 text-sm text-slate-600">
             <span className="font-medium">{filteredTires.length}</span> résultat{filteredTires.length > 1 ? 's' : ''} trouvé{filteredTires.length > 1 ? 's' : ''}
-            {(searchTerm || filterType) && (
-              <button 
-                onClick={() => { setSearchTerm(''); setFilterType(''); }}
-                className="ml-3 text-orange-600 hover:text-orange-700 font-medium"
-              >
-                Réinitialiser les filtres
-              </button>
-            )}
+            <button 
+              onClick={() => { setSearchTerm(''); setFilterType(''); }}
+              className="ml-3 text-orange-600 hover:text-orange-700 font-medium"
+            >
+              Réinitialiser les filtres
+            </button>
           </div>
         )}
       </div>
 
-      {/* Content */}
       {error && <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">{error}</div>}
       
       {loading ? (
@@ -226,21 +206,21 @@ export const Inventory: React.FC = () => {
         </>
       )}
 
-      {/* Modal */}
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        title={editingTire ? "Modifier le pneu" : "Ajouter un nouveau pneu"}
-      >
-        <TireForm 
-          initialData={editingTire}
-          loading={isSubmitting}
-          onSubmit={handleSubmit}
-          onCancel={() => setIsModalOpen(false)}
-        />
-      </Modal>
+      {isAdmin && (
+        <Modal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          title={editingTire ? "Modifier le pneu" : "Ajouter un nouveau pneu"}
+        >
+          <TireForm 
+            initialData={editingTire}
+            loading={isSubmitting}
+            onSubmit={handleSubmit}
+            onCancel={() => setIsModalOpen(false)}
+          />
+        </Modal>
+      )}
 
-      {/* Alert Modal */}
       <AlertModal
         isOpen={alertState.isOpen}
         onClose={closeAlert}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { dbService } from '../services/db';
 import { Appointment } from '../types';
 import { Modal } from '../components/Modal';
@@ -10,6 +11,9 @@ const CLOSING_HOUR = 16;
 const MAX_CAPACITY = 3;
 
 export const Booking: React.FC = () => {
+  const location = useLocation();
+  const selectedTire = (location.state as any)?.selectedTire || '';
+  
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -20,7 +24,7 @@ export const Booking: React.FC = () => {
   const [formData, setFormData] = useState({
     clientName: '',
     clientEmail: '',
-    carBrand: ''
+    carBrand: selectedTire
   });
 
   // Alert modal
@@ -29,6 +33,13 @@ export const Booking: React.FC = () => {
   useEffect(() => {
     loadAppointments();
   }, []);
+
+  // Mettre à jour carBrand si un pneu est sélectionné depuis TireCard
+  useEffect(() => {
+    if (selectedTire) {
+      setFormData(prev => ({ ...prev, carBrand: selectedTire }));
+    }
+  }, [selectedTire]);
 
   const loadAppointments = async () => {
     setLoading(true);
