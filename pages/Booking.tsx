@@ -31,7 +31,7 @@ export const Booking: React.FC = () => {
   });
 
   // Alert modal
-  const { alertState, showAlert, closeAlert } = useAlert();
+  const { alertState, showAlert, showConfirm, closeAlert } = useAlert();
 
   useEffect(() => {
     loadAppointments();
@@ -137,7 +137,7 @@ export const Booking: React.FC = () => {
   };
 
   const handleCancelAppointment = async (id: string) => {
-    const confirmed = await showAlert({
+    const confirmed = await showConfirm({
       title: "Annuler le rendez-vous",
       message: "Êtes-vous sûr de vouloir annuler ce rendez-vous ?",
       type: "confirm"
@@ -146,14 +146,22 @@ export const Booking: React.FC = () => {
     if (!confirmed) return;
 
     try {
-      await dbService.deleteAppointment(id);
-      await loadAppointments();
-      showAlert({
-        title: "Succès",
-        message: "Le rendez-vous a été annulé",
-        type: "success"
-      });
+      // Mettre à jour le statut au lieu de supprimer
+      const appointment = appointments.find(apt => apt.id === id);
+      if (appointment) {
+        await dbService.updateAppointment(id, {
+          ...appointment,
+          statut: AppointmentStatus.CANCELLED
+        });
+        await loadAppointments();
+        showAlert({
+          title: "Succès",
+          message: "Le rendez-vous a été annulé",
+          type: "success"
+        });
+      }
     } catch (err) {
+      console.error('Erreur lors de l\'annulation:', err);
       showAlert({
         title: "Erreur",
         message: "Erreur lors de l'annulation",
@@ -297,14 +305,14 @@ export const Booking: React.FC = () => {
                     <p>🚗 {apt.carBrand}</p>
                   </div>
                 </div>
-                {apt.statut === AppointmentStatus.PENDING && (
+                {/* {apt.statut === AppointmentStatus.PENDING && (
                   <button
                     onClick={() => handleCancelAppointment(apt.id)}
                     className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                   >
                     Annuler
                   </button>
-                )}
+                )} */}
               </div>
             ))}
           </div>
