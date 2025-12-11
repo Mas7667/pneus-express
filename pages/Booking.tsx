@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { dbService } from '../services/db';
-import { Appointment } from '../types';
+import { Appointment, AppointmentStatus } from '../types';
 import { Modal } from '../components/Modal';
 import { AlertModal } from '../components/AlertModal';
 import { useAlert } from '../hooks/useAlert';
+import { useAuth } from '../contexts/AuthContext';
 
 const OPENING_HOUR = 8;
 const CLOSING_HOUR = 16;
@@ -13,9 +14,11 @@ const MAX_CAPACITY = 3;
 export const Booking: React.FC = () => {
   const location = useLocation();
   const selectedTire = (location.state as any)?.selectedTire || '';
+  const { user } = useAuth();
   
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [myAppointments, setMyAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   
   // Booking Form State
@@ -45,6 +48,13 @@ export const Booking: React.FC = () => {
     setLoading(true);
     const data = await dbService.getAppointments();
     setAppointments(data);
+    
+    // Filtrer les réservations de l'utilisateur connecté
+    if (user) {
+      const userAppointments = data.filter(apt => apt.clientEmail === user.email);
+      setMyAppointments(userAppointments);
+    }
+    
     setLoading(false);
   };
 
@@ -80,12 +90,16 @@ export const Booking: React.FC = () => {
     e.preventDefault();
     if (!selectedSlot) return;
 
+    // Pré-remplir avec l'email de l'utilisateur connecté
+    const appointmentData = {
+      ...formData,
+      clientEmail: user?.email || formData.clientEmail,
+      date: selectedDate,
+      time: selectedSlot
+    };
+
     try {
-      await dbService.createAppointment({
-        ...formData,
-        date: selectedDate,
-        time: selectedSlot
-      });
+      await dbService.createAppointment(appointmentData);
       setIsModalOpen(false);
       setFormData({ clientName: '', clientEmail: '', carBrand: '' });
       await loadAppointments();
@@ -108,8 +122,48 @@ export const Booking: React.FC = () => {
     return d.getDay() === 0 || d.getDay() === 6;
   };
 
+  const getStatusBadge = (statut: AppointmentStatus) => {
+    const styles = {
+      [AppointmentStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
+      [AppointmentStatus.COMPLETED]: 'bg-green-100 text-green-800',
+      [AppointmentStatus.CANCELLED]: 'bg-red-100 text-red-800'
+    };
+    
+    return (
+      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${styles[statut]}`}>
+        {statut}
+      </span>
+    );
+  };
+
+  const handleCancelAppointment = async (id: string) => {
+    const confirmed = await showAlert({
+      title: "Annuler le rendez-vous",
+      message: "Êtes-vous sûr de vouloir annuler ce rendez-vous ?",
+      type: "confirm"
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await dbService.deleteAppointment(id);
+      await loadAppointments();
+      showAlert({
+        title: "Succès",
+        message: "Le rendez-vous a été annulé",
+        type: "success"
+      });
+    } catch (err) {
+      showAlert({
+        title: "Erreur",
+        message: "Erreur lors de l'annulation",
+        type: "error"
+      });
+    }
+  };
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8">
       <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
         <h1 className="text-3xl font-bold text-slate-800 mb-2">Réserver un service</h1>
         <p className="text-slate-500 mb-6">Sélectionnez une date et une heure pour votre changement de pneus.</p>
@@ -191,20 +245,23 @@ export const Booking: React.FC = () => {
               required
               value={formData.clientName}
               onChange={e => setFormData({...formData, clientName: e.target.value})}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-orange-500"
-              placeholder="ex: Jean Dupont"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Courriel</label>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Courriel</label>
             <input 
               required
               type="email"
-              value={formData.clientEmail}
+              value={user?.email || formData.clientEmail}
               onChange={e => setFormData({...formData, clientEmail: e.target.value})}
               className="w-full px-3 py-2 border rounded-lg focus:ring-orange-500"
               placeholder="jean@exemple.com"
+              disabled={!!user}
             />
+            {user && (
+              <p className="text-xs text-slate-500 mt-1">Email pré-rempli depuis votre compte</p>
+            )}
+          </div>
+
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Marque de voiture</label>
@@ -222,6 +279,37 @@ export const Booking: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Mes réservations - uniquement pour les utilisateurs connectés */}
+      {user && myAppointments.length > 0 && (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h2 className="text-2xl font-bold text-slate-800 mb-4">Mes Réservations</h2>
+          <div className="space-y-3">
+            {myAppointments.map(apt => (
+              <div key={apt.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="font-semibold text-slate-800">{apt.clientName}</span>
+                    {getStatusBadge(apt.statut)}
+                  </div>
+                  <div className="text-sm text-slate-600">
+                    <p>📅 {new Date(apt.date).toLocaleDateString('fr-FR')} à {apt.time}</p>
+                    <p>🚗 {apt.carBrand}</p>
+                  </div>
+                </div>
+                {apt.statut === AppointmentStatus.PENDING && (
+                  <button
+                    onClick={() => handleCancelAppointment(apt.id)}
+                    className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Alert Modal */}
       <AlertModal
