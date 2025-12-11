@@ -1,0 +1,5 @@
+{
+  "name": "Pneus Express",
+  "description": "Application de gestion d'inventaire pour Pneus Express avec base de données simulée et interface administrative.",
+  "requestFramePermissions": []
+}
