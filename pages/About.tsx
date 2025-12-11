@@ -65,7 +65,7 @@ export const About: React.FC = () => {
             </p>
           </div>
 
-          <div className="pt-6 border-t border-slate-100">
+          {/* <div className="pt-6 border-t border-slate-100">
             <h3 className="text-lg font-medium text-slate-800 mb-2">Actions de débogage</h3>
             <button 
               onClick={handleReset}
@@ -74,7 +74,7 @@ export const About: React.FC = () => {
               Réinitialiser la base de données
             </button>
             <p className="text-xs text-slate-400 mt-2">Utilisez ce bouton si l'application semble bloquée ou pour restaurer les données initiales.</p>
-          </div>
+          </div> */}
         </section>
       </div>
 
