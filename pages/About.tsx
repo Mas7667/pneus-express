@@ -1,7 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { dbService } from '../services/db';
+import { AlertModal } from '../components/AlertModal';
+import { useAlert } from '../hooks/useAlert';
 
 export const About: React.FC = () => {
+  const { alertState, showAlert, showConfirm, closeAlert } = useAlert();
+
+  const handleReset = async () => {
+    const confirmed = await showConfirm({
+      title: "Réinitialiser la base de données",
+      message: "Cela effacera toutes les données locales et rechargera la page. Continuer ?",
+      type: "warning",
+      confirmText: "Réinitialiser",
+      cancelText: "Annuler"
+    });
+
+    if (confirmed) {
+      await dbService.reset();
+      showAlert({
+        title: "Information",
+        message: "La base de données a été réinitialisée",
+        type: "info"
+      });
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
@@ -38,18 +61,14 @@ export const About: React.FC = () => {
           <div className="p-4 bg-orange-50 border-l-4 border-orange-500 rounded-r-lg">
             <h3 className="font-bold text-orange-800 mb-1">Note importante</h3>
             <p className="text-orange-900 italic">
-              "Ajoute à la page « A Propos », que j’ai fait le travail à 100% par l’IA"
+              "J’ai fait le travail à 40% par l’IA"
             </p>
           </div>
 
           <div className="pt-6 border-t border-slate-100">
             <h3 className="text-lg font-medium text-slate-800 mb-2">Actions de débogage</h3>
             <button 
-              onClick={() => {
-                if(window.confirm("Cela effacera toutes les données locales et rechargera la page. Continuer ?")) {
-                  dbService.reset();
-                }
-              }}
+              onClick={handleReset}
               className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors text-sm font-medium"
             >
               Réinitialiser la base de données
@@ -58,6 +77,18 @@ export const About: React.FC = () => {
           </div>
         </section>
       </div>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        onConfirm={alertState.onConfirm}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        confirmText={alertState.confirmText}
+        cancelText={alertState.cancelText}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { Tire, NewTire, TireType, Appointment, NewAppointment } from '../types';
+import { Tire, NewTire, TireType, Appointment, NewAppointment, AppointmentStatus } from '../types';
 import { supabase } from './supabase';
 
 const DB_TIRES_KEY = 'pneus_express_tires_v1';
@@ -55,6 +55,7 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
     carBrand: 'Toyota',
     date: new Date().toISOString().split('T')[0], // Today
     time: '10:00',
+    statut: AppointmentStatus.PENDING,
     createdAt: new Date().toISOString()
   }
 ];
@@ -212,6 +213,7 @@ export const dbService = {
       carBrand: apt.car_brand,
       date: apt.appointment_date,
       time: apt.appointment_time,
+      statut: apt.statut || AppointmentStatus.PENDING,
       createdAt: apt.created_at
     }));
   },
@@ -239,6 +241,7 @@ export const dbService = {
       car_brand: apt.carBrand,
       appointment_date: apt.date,
       appointment_time: apt.time,
+      statut: AppointmentStatus.PENDING,
       created_at: new Date().toISOString()
     };
     
@@ -261,6 +264,7 @@ export const dbService = {
       carBrand: data.car_brand,
       date: data.appointment_date,
       time: data.appointment_time,
+      statut: data.statut || AppointmentStatus.PENDING,
       createdAt: data.created_at
     };
   },
@@ -273,6 +277,9 @@ export const dbService = {
     if (updates.carBrand !== undefined) dbUpdates.car_brand = updates.carBrand;
     if (updates.date !== undefined) dbUpdates.appointment_date = updates.date;
     if (updates.time !== undefined) dbUpdates.appointment_time = updates.time;
+    if (updates.statut !== undefined) dbUpdates.statut = updates.statut;
+    
+    console.log('🔄 Mise à jour Supabase:', { id, updates, dbUpdates });
     
     const { data, error } = await supabase
       .from('appointments')
@@ -282,11 +289,13 @@ export const dbService = {
       .single();
     
     if (error) {
-      console.error('Error updating appointment:', error);
+      console.error('❌ Erreur Supabase update:', error);
       throw error;
     }
     
     if (!data) throw new Error("Appointment not found");
+    
+    console.log('✅ Rendez-vous mis à jour:', data);
     
     // Map database columns to app interface
     return {
@@ -296,6 +305,7 @@ export const dbService = {
       carBrand: data.car_brand,
       date: data.appointment_date,
       time: data.appointment_time,
+      statut: data.statut || AppointmentStatus.PENDING,
       createdAt: data.created_at
     };
   },

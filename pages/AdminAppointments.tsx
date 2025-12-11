@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/db';
-import { Appointment } from '../types';
+import { Appointment, AppointmentStatus } from '../types';
 import { Modal } from '../components/Modal';
+import { AlertModal } from '../components/AlertModal';
+import { useAlert } from '../hooks/useAlert';
 
 export const AdminAppointments: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -12,6 +14,9 @@ export const AdminAppointments: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
 
+  // Alert modal
+  const { alertState, showAlert, showConfirm, closeAlert } = useAlert();
+
   useEffect(() => {
     loadData();
   }, []);
@@ -19,14 +24,41 @@ export const AdminAppointments: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     const data = await dbService.getAppointments();
+    console.log('📅 Rendez-vous chargés:', data.map(apt => ({
+      client: apt.clientName,
+      date: apt.date,
+      statut: apt.statut
+    })));
     setAppointments(data);
     setLoading(false);
   };
 
   const handleDelete = async (id: string) => {
-    if(!window.confirm("Annuler ce rendez-vous ?")) return;
-    await dbService.deleteAppointment(id);
-    loadData();
+    const confirmed = await showConfirm({
+      title: "Annuler le rendez-vous",
+      message: "Êtes-vous sûr de vouloir annuler ce rendez-vous ?",
+      type: "confirm",
+      confirmText: "Annuler le RDV",
+      cancelText: "Retour"
+    });
+    
+    if (!confirmed) return;
+    
+    try {
+      await dbService.deleteAppointment(id);
+      await loadData();
+      showAlert({
+        title: "Succès",
+        message: "Le rendez-vous a été annulé",
+        type: "success"
+      });
+    } catch (err) {
+      showAlert({
+        title: "Erreur",
+        message: "Erreur lors de l'annulation du rendez-vous",
+        type: "error"
+      });
+    }
   };
 
   const handleEdit = (apt: Appointment) => {
@@ -35,17 +67,70 @@ export const AdminAppointments: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const handleMarkCompleted = async (apt: Appointment) => {
+    const confirmed = await showConfirm({
+      title: "Marquer comme terminé",
+      message: `Marquer le rendez-vous de ${apt.clientName} comme terminé ?`,
+      type: "confirm",
+      confirmText: "Terminé",
+      cancelText: "Annuler"
+    });
+
+    if (!confirmed) return;
+
+    try {
+      console.log('🔄 Mise à jour du statut:', apt.id, 'vers', AppointmentStatus.COMPLETED);
+      await dbService.updateAppointment(apt.id, { statut: AppointmentStatus.COMPLETED });
+      await loadData();
+      showAlert({
+        title: "Succès",
+        message: "Le rendez-vous a été marqué comme terminé",
+        type: "success"
+      });
+    } catch (err: any) {
+      console.error('❌ Erreur mise à jour statut:', err);
+      showAlert({
+        title: "Erreur",
+        message: "Erreur lors de la mise à jour du statut: " + (err.message || err),
+        type: "error"
+      });
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingApt) {
         try {
             await dbService.updateAppointment(editingApt.id, formData);
             setIsModalOpen(false);
-            loadData();
+            await loadData();
+            showAlert({
+              title: "Succès",
+              message: "Le rendez-vous a été modifié",
+              type: "success"
+            });
         } catch(err: any) {
-            alert("Erreur: " + err.message);
+            showAlert({
+              title: "Erreur",
+              message: "Erreur: " + (err.message || "Erreur lors de la modification"),
+              type: "error"
+            });
         }
     }
+  };
+
+  const getStatusBadge = (statut: AppointmentStatus) => {
+    const styles = {
+      [AppointmentStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
+      [AppointmentStatus.COMPLETED]: 'bg-green-100 text-green-800',
+      [AppointmentStatus.CANCELLED]: 'bg-red-100 text-red-800'
+    };
+    
+    return (
+      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${styles[statut]}`}>
+        {statut}
+      </span>
+    );
   };
 
   return (
@@ -70,6 +155,7 @@ export const AdminAppointments: React.FC = () => {
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date & Heure</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Client</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Véhicule</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Statut</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
@@ -87,9 +173,33 @@ export const AdminAppointments: React.FC = () => {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                                     {apt.carBrand}
                                 </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    {getStatusBadge(apt.statut)}
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button onClick={() => handleEdit(apt)} className="text-indigo-600 hover:text-indigo-900 mr-4">Modifier</button>
-                                    <button onClick={() => handleDelete(apt.id)} className="text-red-600 hover:text-red-900">Annuler</button>
+                                    <div className="flex gap-2 items-center flex-wrap">
+                                        {apt.statut === AppointmentStatus.PENDING && (
+                                            <button 
+                                                onClick={() => handleMarkCompleted(apt)} 
+                                                className="px-3 py-1 bg-green-600 text-white hover:bg-green-700 rounded font-medium transition-colors shadow-sm"
+                                                title="Marquer comme terminé"
+                                            >
+                                                ✓ Terminé
+                                            </button>
+                                        )}
+                                        <button 
+                                            onClick={() => handleEdit(apt)} 
+                                            className="text-indigo-600 hover:text-indigo-900"
+                                        >
+                                            Modifier
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDelete(apt.id)} 
+                                            className="text-red-600 hover:text-red-900"
+                                        >
+                                            Supprimer
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -130,6 +240,18 @@ export const AdminAppointments: React.FC = () => {
             </div>
         </form>
       </Modal>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        onConfirm={alertState.onConfirm}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        confirmText={alertState.confirmText}
+        cancelText={alertState.cancelText}
+      />
     </div>
   );
 };

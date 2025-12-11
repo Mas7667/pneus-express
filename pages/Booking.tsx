@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/db';
 import { Appointment } from '../types';
 import { Modal } from '../components/Modal';
+import { AlertModal } from '../components/AlertModal';
+import { useAlert } from '../hooks/useAlert';
 
 const OPENING_HOUR = 8;
 const CLOSING_HOUR = 16;
@@ -20,6 +22,9 @@ export const Booking: React.FC = () => {
     clientEmail: '',
     carBrand: ''
   });
+
+  // Alert modal
+  const { alertState, showAlert, closeAlert } = useAlert();
 
   useEffect(() => {
     loadAppointments();
@@ -70,12 +75,20 @@ export const Booking: React.FC = () => {
         date: selectedDate,
         time: selectedSlot
       });
-      alert("Rendez-vous confirmé !");
       setIsModalOpen(false);
       setFormData({ clientName: '', clientEmail: '', carBrand: '' });
-      loadAppointments();
+      await loadAppointments();
+      showAlert({
+        title: "Rendez-vous confirmé !",
+        message: `Votre rendez-vous pour le ${selectedDate} à ${selectedSlot} a été confirmé.`,
+        type: "success"
+      });
     } catch (err: any) {
-      alert(err.message || "Erreur lors de la réservation");
+      showAlert({
+        title: "Erreur",
+        message: err.message || "Erreur lors de la réservation",
+        type: "error"
+      });
     }
   };
 
@@ -198,6 +211,17 @@ export const Booking: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        confirmText={alertState.confirmText}
+        cancelText={alertState.cancelText}
+      />
     </div>
   );
 };

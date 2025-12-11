@@ -4,6 +4,8 @@ import { Tire, TireType, NewTire } from '../types';
 import { TireCard } from '../components/TireCard';
 import { Modal } from '../components/Modal';
 import { TireForm } from '../components/TireForm';
+import { AlertModal } from '../components/AlertModal';
+import { useAlert } from '../hooks/useAlert';
 
 export const Inventory: React.FC = () => {
   const [tires, setTires] = useState<Tire[]>([]);
@@ -13,6 +15,9 @@ export const Inventory: React.FC = () => {
   // Filtering state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<TireType | ''>('');
+
+  // Alert modal
+  const { alertState, showAlert, showConfirm, closeAlert } = useAlert();
 
   // Modal/Form state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -81,12 +86,30 @@ export const Inventory: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce pneu ?")) return;
+    const confirmed = await showConfirm({
+      title: "Confirmer la suppression",
+      message: "Êtes-vous sûr de vouloir supprimer ce pneu ?",
+      type: "confirm",
+      confirmText: "Supprimer",
+      cancelText: "Annuler"
+    });
+    
+    if (!confirmed) return;
+    
     try {
       await dbService.deleteTire(id);
       await loadData();
+      showAlert({
+        title: "Succès",
+        message: "Le pneu a été supprimé avec succès",
+        type: "success"
+      });
     } catch (err) {
-      alert("Erreur lors de la suppression");
+      showAlert({
+        title: "Erreur",
+        message: "Erreur lors de la suppression du pneu",
+        type: "error"
+      });
     }
   };
 
@@ -95,13 +118,27 @@ export const Inventory: React.FC = () => {
     try {
       if (editingTire) {
         await dbService.updateTire(editingTire.id, data);
+        showAlert({
+          title: "Succès",
+          message: "Le pneu a été modifié avec succès",
+          type: "success"
+        });
       } else {
         await dbService.createTire(data);
+        showAlert({
+          title: "Succès",
+          message: "Le pneu a été ajouté avec succès",
+          type: "success"
+        });
       }
       setIsModalOpen(false);
       await loadData();
     } catch (err) {
-      alert("Erreur lors de la sauvegarde");
+      showAlert({
+        title: "Erreur",
+        message: "Erreur lors de la sauvegarde du pneu",
+        type: "error"
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -202,6 +239,18 @@ export const Inventory: React.FC = () => {
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        onConfirm={alertState.onConfirm}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        confirmText={alertState.confirmText}
+        cancelText={alertState.cancelText}
+      />
     </div>
   );
 };

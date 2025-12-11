@@ -45,6 +45,7 @@ CREATE TABLE appointments (
   car_brand TEXT NOT NULL,
   appointment_date DATE NOT NULL,
   appointment_time TIME NOT NULL,
+  statut TEXT DEFAULT 'En attente',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -55,6 +56,12 @@ ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Enable all access for appointments" ON appointments
   FOR ALL USING (true);
 ```
+
+**Valeurs possibles pour le champ `statut`** :
+
+- `'En attente'` - Rendez-vous confirmé mais pas encore effectué (par défaut)
+- `'Terminé'` - Service complété
+- `'Annulé'` - Rendez-vous annulé
 
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 

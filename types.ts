@@ -5,6 +5,12 @@ export enum TireType {
   PERFORMANCE = 'Performance'
 }
 
+export enum AppointmentStatus {
+  PENDING = 'En attente',
+  COMPLETED = 'Terminé',
+  CANCELLED = 'Annulé'
+}
+
 export interface Tire {
   id: string;
   brand: string;
@@ -29,6 +35,7 @@ export interface Appointment {
   carBrand: string;
   date: string; // YYYY-MM-DD
   time: string; // HH:00
+  statut: AppointmentStatus;
   createdAt: string;
 }
 

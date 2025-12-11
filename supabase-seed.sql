@@ -9,9 +9,11 @@ INSERT INTO tires (brand, model, width, ratio, diameter, price, stock, type, des
 ('Goodyear', 'Eagle F1', 225, 45, 17, 275.00, 8, 'Performance', 'Performance sportive exceptionnelle en conditions sèches et humides.', NULL),
 ('Pirelli', 'Winter Sottozero', 235, 50, 18, 295.00, 6, 'Hiver', 'Sécurité et contrôle optimal sur neige et glace.', NULL);
 
--- Insertion d'un rendez-vous de test (ajustez la date selon vos besoins)
-INSERT INTO appointments (client_name, client_email, car_brand, appointment_date, appointment_time) VALUES
-('Jean Dupont', 'jean@example.com', 'Toyota Corolla', CURRENT_DATE + INTERVAL '1 day', '10:00');
+-- Insertion de rendez-vous de test avec différents statuts
+INSERT INTO appointments (client_name, client_email, car_brand, appointment_date, appointment_time, statut) VALUES
+('Jean Dupont', 'jean@example.com', 'Toyota Corolla', CURRENT_DATE + INTERVAL '1 day', '10:00', 'En attente'),
+('Marie Martin', 'marie@example.com', 'Honda Civic', CURRENT_DATE + INTERVAL '2 days', '14:00', 'En attente'),
+('Pierre Durand', 'pierre@example.com', 'Ford Focus', CURRENT_DATE - INTERVAL '1 day', '09:00', 'Terminé');
 
 -- Vérification des données insérées
 SELECT * FROM tires ORDER BY created_at DESC;

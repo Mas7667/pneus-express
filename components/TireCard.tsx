@@ -21,7 +21,7 @@ export const TireCard: React.FC<TireCardProps> = ({ tire, onEdit, onDelete }) =>
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
       <div className="h-40 bg-slate-100 relative overflow-hidden group">
         <img 
-          src={tire.imageUrl || `https://picsum.photos/seed/${tire.id}/400/300`} 
+          src={tire.imageUrl || `https://tse2.mm.bing.net/th/id/OIP.t7AibZLfC68goTlJ2YAbVgHaEH?cb=ucfimg2&ucfimg=1&rs=1&pid=ImgDetMain&o=7&rm=3`} 
           alt={`${tire.brand} ${tire.model}`}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
