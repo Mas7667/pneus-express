@@ -29,7 +29,7 @@ export const About: React.FC = () => {
     <div className="max-w-3xl mx-auto space-y-8">
       <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
         <div className="border-b border-slate-100 pb-6 mb-6">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">À Propos</h1>
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">Hello There !</h1>
           <p className="text-slate-500">Détails du projet et de l'environnement.</p>
         </div>
 
